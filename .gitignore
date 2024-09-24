@@ -1,0 +1,7 @@
+env
+.env
+service_account.json
+audios
+.nicegui
+__pycache__
+.well-known

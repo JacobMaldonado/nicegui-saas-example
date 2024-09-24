@@ -1,0 +1,5 @@
+OPENAI_API_KEY="<API_KEY>" # For openai
+GOOGLE_APPLICATION_CREDENTIALS="service_account.json" # For google cloud
+DESCOPE_PROJECT_ID="<PROJECT_ID>" # For descope account
+STRIPE_SECRET_KEY='<STRIPE_SECRET_KEY>' # For stripe payment
+DOMAIN='http://localhost:8080' # For stripe redirect
