@@ -28,10 +28,10 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None, 
             payload, stripe_signature, webhook_secret
         )
     except ValueError as e:
-        print(f"Invalid payload: {e}")
+        print("Invalid payload received")
         raise HTTPException(status_code=400, detail="Invalid payload")
     except SignatureVerificationError as e:
-        print(f"Invalid signature: {e}")
+        print("Invalid signature received")
         raise HTTPException(status_code=400, detail="Invalid signature")
     if event["type"] == "checkout.session.completed":
         print("Checkout session completed")

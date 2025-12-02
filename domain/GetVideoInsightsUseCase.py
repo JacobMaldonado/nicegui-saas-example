@@ -35,7 +35,15 @@ class GetVideoInsightsUseCase:
             raise Exception("Invalid file path")
         
         if "video" in upload_file.type:
-            video_path = os.path.abspath(f'./video.{file_extension}')
+            # Create a temporary video file with validated extension
+            video_filename = f'video_{audio_id}.{file_extension}'
+            video_path = os.path.abspath(f'./{video_filename}')
+            
+            # Verify the video path is in the expected directory
+            expected_dir = os.path.abspath('.')
+            if not video_path.startswith(expected_dir):
+                raise Exception("Invalid video file path")
+            
             with open(video_path, 'wb') as f:
                 f.write(upload_file.file)
             video_file_clip = VideoFileClip(video_path)
