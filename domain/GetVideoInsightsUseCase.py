@@ -1,10 +1,12 @@
-from moviepy.editor import *
+import os
+import re
 import uuid
+from moviepy.editor import *
+from pydub import AudioSegment
 
 from models.AnalysisPage import AnalysisPage
 from services.AnalysisRepository import AnalysisRepository
 from services.FileStorageService import FileStorageService
-from pydub import AudioSegment
 
 class GetVideoInsightsUseCase:
     def __init__(self):
@@ -12,24 +14,54 @@ class GetVideoInsightsUseCase:
         self.file_storage_service = FileStorageService()
 
     def execute(self, upload_file, plan):
+        
         if len(upload_file.file) > 1024 * 1024 * 25:
             raise Exception("File size too large, upload a shorter file")
+        
+        # Sanitize file extension to prevent path traversal
         file_extension = upload_file.file_name.split(".")[-1]
+        # Only allow alphanumeric extensions
+        if not re.match(r'^[a-zA-Z0-9]+$', file_extension):
+            raise Exception("Invalid file extension")
+        
+        # Ensure audios directory exists
+        os.makedirs('./audios', exist_ok=True)
+        
+        audio_id = str(uuid.uuid4())
+        audio_path = os.path.abspath(f'./audios/{audio_id}.mp3')
+        
+        # Verify the path is within the audios directory (prevent path traversal)
+        if not audio_path.startswith(os.path.abspath('./audios')):
+            raise Exception("Invalid file path")
+        
         if "video" in upload_file.type:
-            with open(f'video.{file_extension}', 'wb') as f:
+            # Create a temporary video file with validated extension
+            video_filename = f'video_{audio_id}.{file_extension}'
+            video_path = os.path.abspath(f'./{video_filename}')
+            
+            # Verify the video path is in the expected directory
+            expected_dir = os.path.abspath('.')
+            if not video_path.startswith(expected_dir):
+                raise Exception("Invalid video file path")
+            
+            with open(video_path, 'wb') as f:
                 f.write(upload_file.file)
-            video_file_clip = VideoFileClip("./video.mp4")
+            video_file_clip = VideoFileClip(video_path)
             audio = video_file_clip.audio
-            audio_id = str(uuid.uuid4())
-            audio.write_audiofile(f"./audios/{audio_id}.mp3")
-            with open(f'./audios/{audio_id}.mp3', 'rb') as f:
+            audio.write_audiofile(audio_path)
+            with open(audio_path, 'rb') as f:
                 result = self.file_storage_service.save(f"{audio_id}.mp3", f.read())
+            # Clean up video file
+            try:
+                os.remove(video_path)
+            except Exception:
+                pass
         else:
-            audio_id = str(uuid.uuid4())
             result = self.file_storage_service.save(f"{audio_id}.mp3", upload_file.file)
-            with open(f'./audios/{audio_id}.mp3', 'wb') as f:
+            with open(audio_path, 'wb') as f:
                 f.write(upload_file.file)
-        audio = AudioSegment.from_file(f'./audios/{audio_id}.mp3')
+        
+        audio = AudioSegment.from_file(audio_path)
         duration_seconds = len(audio) / 1000.0  # pydub calculates in milliseconds
         print(f"Duration: {duration_seconds:.2f} seconds")
         if plan != 'paid' and duration_seconds > 120:
