@@ -1,5 +1,6 @@
 import json
-from fastapi import FastAPI, HTTPException, Request
+import os
+from fastapi import FastAPI, HTTPException, Request, Header
 from fastapi.routing import APIRouter
 from nicegui import app
 import stripe
@@ -12,15 +13,25 @@ from domain.UserManagementUseCase import UserManagementUseCase
 router = APIRouter()    
 
 @router.post("/webhook")
-async def stripe_webhook(request: Request):
+async def stripe_webhook(request: Request, stripe_signature: str = Header(None, alias="stripe-signature")):
     payload = await request.body()
+    webhook_secret = os.getenv('STRIPE_WEBHOOK_SECRET')
+    
+    if not webhook_secret:
+        raise HTTPException(status_code=500, detail="Webhook secret not configured")
+    
+    if not stripe_signature:
+        raise HTTPException(status_code=400, detail="Missing stripe-signature header")
+    
     try:
-        event = stripe.Event.construct_from(json.loads(payload), stripe.api_key)
+        event = stripe.Webhook.construct_event(
+            payload, stripe_signature, webhook_secret
+        )
     except ValueError as e:
-        print("Invalid payload")
+        print(f"Invalid payload: {e}")
         raise HTTPException(status_code=400, detail="Invalid payload")
     except SignatureVerificationError as e:
-        print("Invalid signature")
+        print(f"Invalid signature: {e}")
         raise HTTPException(status_code=400, detail="Invalid signature")
     if event["type"] == "checkout.session.completed":
         print("Checkout session completed")
@@ -28,10 +39,12 @@ async def stripe_webhook(request: Request):
         _object = event.get("data", {}).get("object", {})
         print(_object)
         user_id = _object.get("metadata", {}).get("user_id")
+        if not user_id:
+            print("Missing user_id in metadata")
+            return {}
         user = user_management_use_case.upgrade_plan(user_id, 'paid')
-        session_id = _object.get("metadata", {}).get("session_id")
-        if session_id in app.storage._users:
-            app.storage._users[session_id][USER_INFO] = user.model_dump()
+        # Note: Session storage updates should be handled through the app storage API
+        # The session will be updated when the user next authenticates
     elif event["type"] == "checkout.session.cancelled":
         print("Checkout session cancelled")
     elif event["type"] == "checkout.session.accepted":

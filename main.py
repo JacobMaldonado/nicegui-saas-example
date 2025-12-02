@@ -28,4 +28,7 @@ app.include_router(account_router)
 app.include_router(upgrade_router)
 
 icon_path = os.path.join('pages', 'static', 'logo_2.jpeg')
-ui.run(title='Confidentier', favicon=icon_path, storage_secret="my_secret_key_2")
+storage_secret = os.getenv('STORAGE_SECRET')
+if not storage_secret:
+    raise ValueError("STORAGE_SECRET environment variable is required for secure session storage")
+ui.run(title='Confidentier', favicon=icon_path, storage_secret=storage_secret)
