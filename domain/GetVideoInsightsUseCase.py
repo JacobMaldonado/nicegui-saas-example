@@ -1,10 +1,12 @@
-from moviepy.editor import *
+import os
+import re
 import uuid
+from moviepy.editor import *
+from pydub import AudioSegment
 
 from models.AnalysisPage import AnalysisPage
 from services.AnalysisRepository import AnalysisRepository
 from services.FileStorageService import FileStorageService
-from pydub import AudioSegment
 
 class GetVideoInsightsUseCase:
     def __init__(self):
@@ -12,8 +14,6 @@ class GetVideoInsightsUseCase:
         self.file_storage_service = FileStorageService()
 
     def execute(self, upload_file, plan):
-        import os
-        import re
         
         if len(upload_file.file) > 1024 * 1024 * 25:
             raise Exception("File size too large, upload a shorter file")

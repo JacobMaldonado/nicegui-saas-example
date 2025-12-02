@@ -14,7 +14,7 @@ class TextAnalysisService:
             text = text[:max_length]
         return text
 
-    def analyze(self, text, prompt, length = None):
+    def analyze(self, text, prompt, length=None):
         # Sanitize inputs to prevent prompt injection
         sanitized_text = self._sanitize_input(text)
         sanitized_prompt = self._sanitize_input(prompt)

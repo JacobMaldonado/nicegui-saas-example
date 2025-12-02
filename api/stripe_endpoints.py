@@ -43,8 +43,10 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None, 
             print("Missing user_id in metadata")
             return {}
         user = user_management_use_case.upgrade_plan(user_id, 'paid')
-        # Note: Session storage updates should be handled through the app storage API
-        # The session will be updated when the user next authenticates
+        # Note: Removed direct access to app.storage._users as it exposes internal implementation.
+        # The user's plan will be updated in the database and will be reflected when they
+        # refresh the page or re-authenticate. For immediate updates, implement a proper
+        # session refresh mechanism using the public app.storage API.
     elif event["type"] == "checkout.session.cancelled":
         print("Checkout session cancelled")
     elif event["type"] == "checkout.session.accepted":
